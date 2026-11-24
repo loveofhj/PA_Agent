@@ -10,7 +10,7 @@
 <body>
 <header><div class="brand"><div class="brand-mark" aria-hidden="true">PA</div><div><strong>WP8 정밀조립</strong><span>LT2 FRT 도어트림 운영 콘솔</span></div></div><button id="health">LLM 상태 점검</button></header>
 <nav aria-label="운영 메뉴">
-<button data-page="overview" aria-current="page">대시보드</button><button data-page="task">작업 관리</button><button data-page="skills">실행 기술</button><button data-page="episodes">데이터 수집</button><button data-page="catalog">데이터셋</button><button data-page="events">활동 기록</button>
+<button data-page="overview" aria-current="page">대시보드</button><button data-page="task">작업 관리</button><button data-page="schedule">셀 스케줄</button><button data-page="skills">실행 기술</button><button data-page="episodes">데이터 수집</button><button data-page="catalog">데이터셋</button><button data-page="events">활동 기록</button>
 </nav>
 <div class="workspace"><main>
 <p id="status" role="status"></p>
@@ -30,6 +30,16 @@
 <option value="normal">정상</option><option value="mismatch">지그 불일치</option><option value="recover">체결 실패 후 복구</option><option value="failure">체결 재작업 한도 초과</option><option value="ng">최종 검사 NG</option><option value="safe_stop">안전 허가 없음</option><option value="stale">PLC 상태 STALE</option><option value="low_confidence">저신뢰</option><option value="timeout">응답 타임아웃</option>
 </select></label><button>Mock 실행 승인</button></form>
 <div id="task-events" class="timeline"></div>
+</section>
+<section id="schedule" hidden>
+<h1>WP1 셀 스케줄</h1>
+<p class="muted">레시피와 공정 기술을 지원하는 셀에 LOT를 배치합니다. 시각은 Mock 예상값입니다.</p>
+<form id="schedule-form">
+<label>WP1 작업계획 JSON<textarea name="plan" required rows="8"></textarea></label>
+<div class="row"><button>스케줄 생성</button><button id="schedule-example" type="button">예제 불러오기</button></div>
+</form>
+<label>저장된 계획<select id="schedule-history"><option value="">계획 선택</option></select></label>
+<div id="schedule-result"></div>
 </section>
 <section id="skills" hidden><h1>공정별 실행 기술</h1><div id="skill-flow"></div><div id="skill-list"></div></section>
 <section id="episodes" hidden>

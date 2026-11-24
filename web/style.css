@@ -63,3 +63,7 @@ button.flow-card:hover,button.flow-card[aria-pressed=true]{background:#e5f5ef;bo
 .timeline .event-alert::before{background:#a7462d}.event-time{font-size:.76rem;color:#496762}
 @media(max-width:600px){.flow{flex-direction:column;gap:.9rem;overflow:visible}.flow-item:not(:last-child)::after{left:50%;top:calc(100% + .08rem);transform:rotate(135deg)}}
 button.open-task{justify-self:start;background:white;color:#096354;border-color:#cbddd6;font-size:.8rem;padding:.35rem .55rem}
+.schedule-table-wrap{overflow-x:auto}
+.schedule-table{width:100%;border-collapse:collapse;text-align:left;font-size:.85rem}
+.schedule-table th,.schedule-table td{padding:.55rem .45rem;border-bottom:1px solid var(--line);white-space:nowrap}
+.schedule-table th{color:#34625a;background:#f1f8f5}

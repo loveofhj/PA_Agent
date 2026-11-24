@@ -209,9 +209,58 @@ async function members() {
     box.append(label,select); return box;
   });
 }
+let schedules = [];
+const localTime = new Intl.DateTimeFormat("ko-KR",{dateStyle:"short",timeStyle:"medium"});
+function renderSchedule(schedule) {
+  const {request, slots, routes, unassigned} = schedule;
+  const rows = [node("h2", `${request.plan_id} · 개정 ${request.revision}`)];
+  const quantity = slots.reduce((sum, slot) => sum + slot.quantity, 0);
+  rows.push(node("p", `배치 ${slots.length} LOT · ${quantity}개 · 납기 초과 예상 ${slots.filter(slot => slot.late).length} LOT`));
+  for (const id of [...new Set(slots.map(slot => slot.cell_id))].sort()) {
+    const cell = node("article",undefined,"panel");
+    const table = node("table",undefined,"schedule-table");
+    const head = table.createTHead().insertRow();
+    for (const title of ["작업·LOT","레시피","수량","예상 시간","비고"]) {
+      const column = node("th",title);
+      column.scope = "col";
+      head.append(column);
+    }
+    const body = table.createTBody();
+    for (const slot of slots.filter(item => item.cell_id === id)) {
+      const row = body.insertRow();
+      const note = [slot.setup_sec ? `전환 ${slot.setup_sec}초` : "", slot.late ? "납기 초과 예상" : ""].filter(Boolean);
+      for (const value of [`${slot.order_id} · LOT ${slot.lot_number}`, slot.recipe_id, slot.quantity,
+        `${localTime.format(new Date(slot.start_at))} → ${localTime.format(new Date(slot.end_at))}`,
+        note.join(" · ") || "—"]) row.insertCell().textContent = value;
+      if (slot.late) row.classList.add("error");
+    }
+    const viewport = node("div",undefined,"schedule-table-wrap");
+    viewport.append(table);
+    cell.append(node("h3",id),viewport);
+    rows.push(cell);
+  }
+  for (const order of unassigned) {
+    rows.push(node("p", `${order.order_id} · ${order.recipe_id} ${order.quantity}개 배치 보류 · ${order.reason}`, "error"));
+  }
+  rows.push(node("h3","셀 공정 순서"),flow("LOT 공정 및 기술",routes.map(step => ({
+    title:step.name,tag:step.step_code,caption:step.skills.map(skill => skill.name).join(" · ")
+  }))));
+  byId("schedule-result").replaceChildren(...rows);
+}
+async function scheduleHistory() {
+  const select = byId("schedule-history");
+  const current = select.value;
+  const previous = current !== "" ? schedules[Number(current)]?.request : null;
+  schedules = await api("schedules");
+  select.replaceChildren(new Option("계획 선택",""), ...schedules.map((schedule,index) =>
+    new Option(`${schedule.request.plan_id} · 개정 ${schedule.request.revision}`, String(index))));
+  const index = schedules.findIndex(s => s.request.plan_id === previous?.plan_id && s.request.revision === previous.revision);
+  if (index >= 0) select.value = String(index);
+}
 const pages = {
   overview,
   task: async () => {},
+  schedule: scheduleHistory,
   skills: showSkills,
   episodes: async () => fill("episode-list",await api("episodes"),episodeDetail),
   catalog: async () => { await members(); await datasetList(); },
@@ -364,3 +413,33 @@ byId("catalog-flow").append(flow("데이터셋 등록 순서", [
   {title:"분할 지정", caption:"학습 · 검증 · 테스트"},
   {title:"버전 등록", caption:"카탈로그에서 조회"}
 ]));
+
+byId("schedule-example").addEventListener("click", () => {
+  const stamp = new Date();
+  stamp.setSeconds(0,0);
+  byId("schedule-form").elements.plan.value = JSON.stringify({
+    plan_id: "WP1-DEMO-" + stamp.toISOString().replace(/[:.]/g,"-"), revision: 1,
+    start_at: stamp.toISOString(),
+    orders: [
+      {order_id:"LH-100", recipe_id:"LH", quantity:100, priority:50},
+      {order_id:"RH-20", recipe_id:"RH", quantity:20, priority:80,
+       due_at:new Date(stamp.getTime() + 30*60000).toISOString()}
+    ]
+  },null,2);
+});
+byId("schedule-history").addEventListener("change", event => {
+  if (event.target.value === "") byId("schedule-result").replaceChildren();
+  else renderSchedule(schedules[Number(event.target.value)]);
+});
+handle("schedule-form","submit",async form => {
+  let plan;
+  try { plan = JSON.parse(form.elements.plan.value); }
+  catch { throw Error("WP1 작업계획의 JSON 형식을 확인하세요."); }
+  const schedule = await api("schedules",plan);
+  await scheduleHistory();
+  const index = schedules.findIndex(s => s.request.plan_id === schedule.request.plan_id &&
+    s.request.revision === schedule.request.revision);
+  byId("schedule-history").value = String(index);
+  renderSchedule(schedule);
+  status("셀 스케줄을 저장했습니다.");
+});

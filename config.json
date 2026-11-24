@@ -1,6 +1,14 @@
 {
   "approved_recipes": ["LH", "RH"],
   "preview_lot_size": 10,
+  "mock_schedule": {
+    "cycle_sec_per_unit": 60,
+    "recipe_change_sec": 120,
+    "cells": [
+      {"id": "CELL-01", "recipes": ["LH", "RH"], "skills": ["SKL-005", "SKL-006", "SKL-011", "SKL-013", "SKL-014", "SKL-017", "SKL-018", "SKL-019", "SKL-023"]},
+      {"id": "CELL-02", "recipes": ["LH"], "skills": ["SKL-005", "SKL-006", "SKL-011", "SKL-013", "SKL-014", "SKL-017", "SKL-018", "SKL-019", "SKL-023"]}
+    ]
+  },
   "retry_limit": null,
   "rework_limit": null,
   "skill_timeout_sec": null,

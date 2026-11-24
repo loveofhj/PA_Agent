@@ -6,6 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl, urlsplit
 
 from .chat import answer
+from .scheduling import preview
 from .core import CONFIG, ROOT, SKILLS, Agent, Store, dump
 from .pipeline import catalog, collect, promote
 from .planner import Planner
@@ -52,7 +53,7 @@ class Handler(BaseHTTPRequestHandler):
                     data = list(SKILLS.values())
                 elif path == "/api/datasets":
                     data = catalog(store, dict(parse_qsl(url.query)))
-                elif path in ("/api/tasks", "/api/events", "/api/episodes"):
+                elif path in ("/api/tasks", "/api/events", "/api/episodes", "/api/schedules"):
                     data = store.list(path.rsplit("/", 1)[1])
                 elif path.startswith("/api/tasks/"):
                     data = store.get("tasks", path.rsplit("/", 1)[1])
@@ -80,6 +81,8 @@ class Handler(BaseHTTPRequestHandler):
                     LOG.warning("TaskID=%s state=%s %s", result["TaskID"], result["state"], result["error"])
             elif path.startswith("/api/tasks/") and path.endswith("/run"):
                 result = agent.run(path.split("/")[3], payload.get("scenario", "normal"))
+            elif path == "/api/schedules":
+                result = preview(store, payload)
             elif path == "/api/chat":
                 return self.send(200, answer(store, agent.planner, payload))
             elif path == "/api/episodes":
