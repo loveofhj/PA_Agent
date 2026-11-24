@@ -1,0 +1,30 @@
+{
+  "approved_recipes": ["LH", "RH"],
+  "retry_limit": null,
+  "rework_limit": null,
+  "skill_timeout_sec": null,
+  "tolerance": null,
+  "mock_retry_limit": 1,
+  "mock_rework_limit": 1,
+  "confidence_min": null,
+  "required_modalities": ["robot", "inspection"],
+  "optional_modalities": [],
+  "accepted_grades": ["A", "B"],
+  "stale_sec": null,
+  "sync_ms": null,
+  "frame_gap_percent": null,
+  "outlier_ranges": {},
+  "calibrations_mm": {},
+  "trigger_before_sec": null,
+  "trigger_after_sec": null,
+  "steps": [
+    ["S1","AMR 도킹",["SKL-013","SKL-014"]],
+    ["S2","판넬·서브부품 장착",["SKL-005","SKL-006"]],
+    ["S3","1차 스크류 체결",["SKL-017"]],
+    ["S4","구역 이동",["SKL-013","SKL-014"]],
+    ["S5","클립·베젤 압입 및 협업 결합",["SKL-018","SKL-019"]],
+    ["S6","UPR 장착 및 최종 체결",["SKL-005","SKL-006","SKL-017"]],
+    ["S7","검사·판정",["SKL-011"]],
+    ["S8","융착기 인계",["SKL-014","SKL-023"]]
+  ]
+}

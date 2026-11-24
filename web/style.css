@@ -1,0 +1,23 @@
+:root{font-family:system-ui,sans-serif;color:#172433;background:#f3f6f8;font-size:15px;--line:#d7e1e8;--accent:#075d52}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0}
+header{display:flex;align-items:center;justify-content:space-between;background:#122936;color:white;padding:1rem max(1rem,calc((100vw - 1120px)/2));gap:1rem}
+header strong{font-size:1.25rem}header span{display:block;color:#c8dce4;font-size:.85rem;margin-top:.3rem}
+nav{display:flex;flex-wrap:wrap;gap:.35rem;padding:.6rem max(1rem,calc((100vw - 1120px)/2));background:white;border-bottom:1px solid var(--line)}
+nav button{background:white;color:#243b4a;border-color:var(--line)}
+nav [aria-current]{background:var(--accent);color:white}
+main{max-width:1152px;margin:auto;padding:0 1rem 3rem}
+section{display:grid;gap:.9rem}h1,h2,p{margin:.3rem 0}h2{font-size:1.1rem}
+#status{min-height:2rem;padding:.4rem 0;color:#075d52}.error{color:#9a263e!important}
+form,details,.panel,.metric{background:white;border:1px solid var(--line);border-radius:.5rem;padding:.9rem;margin:.25rem 0}
+form{display:grid;gap:.8rem;justify-items:start}
+.row,.metrics{display:flex;flex-wrap:wrap;gap:.75rem;align-items:end}.metrics{align-items:stretch}
+.metric{min-width:105px}.metric strong{display:block;font-size:1.5rem}
+label{display:grid;gap:.35rem;color:#345;font-size:.87rem}label:has(textarea){width:100%}
+input,select,textarea,button{font:inherit;padding:.5rem .65rem;border:1px solid #a8bbc7;border-radius:.35rem;color:inherit;background:white}
+textarea{width:100%;min-height:4rem}button{cursor:pointer;background:var(--accent);color:white;border-color:var(--accent)}button:disabled{opacity:.55;cursor:wait}
+.check{display:flex;align-items:center;flex-direction:row}
+summary{cursor:pointer;overflow-wrap:anywhere}pre{overflow:auto;max-height:26rem;background:#edf3f6;padding:.7rem;font-size:.82rem;white-space:pre-wrap;overflow-wrap:anywhere}
+ol{padding-left:1.5rem}li{padding:.24rem 0}
+.member{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:.3rem 0}

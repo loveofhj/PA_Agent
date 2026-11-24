@@ -1,0 +1,15 @@
+services:
+  pa-agent:
+    build: .
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      LLM_MODEL: ${LLM_MODEL:-qwen3:14b}
+      LLM_TIMEOUT_SEC: ${LLM_TIMEOUT_SEC:-600}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - pa-data:/data
+      - ./config.json:/app/config.json:ro
+volumes:
+  pa-data:
