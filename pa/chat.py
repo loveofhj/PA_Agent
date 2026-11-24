@@ -2,7 +2,7 @@ from .core import dump
 
 STATES = {
     "IDLE": "대기", "PLANNING": "계획 작성 중", "READY": "실행 승인 대기",
-    "VALIDATING": "실행 조건 확인 중", "RUNNING": "실행 중", "DONE": "완료",
+    "PREVIEW_ONLY": "배치 계획 미리보기", "VALIDATING": "실행 조건 확인 중", "RUNNING": "실행 중", "DONE": "완료",
     "HOLD": "보류", "RECOVERING": "복구 중", "FAILED": "실패", "SAFE-STOP": "안전 정지",
 }
 

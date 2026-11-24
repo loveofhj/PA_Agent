@@ -28,7 +28,7 @@ async function api(path, data) {
 function fill(id, rows, render) {
   byId(id).replaceChildren(...(rows.length ? rows.map(render) : [node("p", "기록 없음")]));
 }
-const stateNames = {IDLE:"대기", PLANNING:"계획 작성 중", READY:"승인 대기", VALIDATING:"조건 확인 중",
+const stateNames = {IDLE:"대기", PLANNING:"계획 작성 중", READY:"승인 대기", PREVIEW_ONLY:"배치 계획 미리보기", VALIDATING:"조건 확인 중",
   RUNNING:"실행 중", RECOVERING:"복구 중", DONE:"완료", HOLD:"보류", FAILED:"실패", "SAFE-STOP":"안전 정지"};
 const eventNames = {INTERLOCK:"실행 조건 점검", STEP_DONE:"단계 완료", SKILL_RESULT:"실행 결과",
   DATA_QUALITY:"데이터 품질 검사", DATASET_PROMOTED:"데이터셋 등록"};
@@ -82,8 +82,14 @@ async function showTask(task) {
   for (const step of task.steps || []) {
     plan.append(node("li", step.StepCode + " " + step.name + " · " + step.skills.map(x => x.SkillID).join(", ")));
   }
+  const batch = task.batch_preview;
+  const summary = batch ? [
+    node("p", `${task.RecipeID} ${batch.quantity}개 · LOT ${batch.lot_count}개 (LOT당 최대 ${batch.lot_size}개)` +
+      (batch.remainder ? ` · 마지막 LOT ${batch.remainder}개` : "")),
+    node("p", "배치는 계획 확인용입니다. Mock 실행을 하려면 수량 1개로 새 작업을 생성하세요.","muted")
+  ] : [];
   byId("task-result").replaceChildren(node("h2", (stateNames[task.state] || task.state) + (task.current_step ? " · " + task.current_step : "")),
-    node("p", task.error || task.decision?.reason || ""), plan, taskDetail(task));
+    node("p", task.error || task.decision?.reason || ""), ...summary, plan, taskDetail(task));
   byId("run").hidden = task.state !== "READY";
   const events = (await api("events")).filter(e => e.TaskID === selectedTask);
   fill("task-events",events,eventDetail);

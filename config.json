@@ -1,5 +1,6 @@
 {
   "approved_recipes": ["LH", "RH"],
+  "preview_lot_size": 10,
   "retry_limit": null,
   "rework_limit": null,
   "skill_timeout_sec": null,

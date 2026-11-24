@@ -78,6 +78,30 @@ class Prototype(unittest.TestCase):
             result = Agent(self.store, planner).plan({"instruction":"RH 1개 조립"})
         self.assertEqual((result["state"], result["RecipeID"]), ("READY","RH"))
 
+    def test_batch_preview_and_execution_guard(self):
+        with patch.dict("os.environ", {"LLM_PROVIDER": "ollama"}):
+            planner = Planner()
+        def response(path, body, timeout):
+            event = json.loads(body["messages"][1]["content"])
+            self.assertEqual(event["parsed_request"], {"recipe": "LH", "quantity": 100})
+            self.assertEqual(body["format"]["properties"]["quantity"]["enum"], [100, None])
+            decision = {key: event[key] for key in ("TaskID", "SubTaskID", "EventID")}
+            decision.update(decision_type="plan", recipe="LH", quantity=100, reason="배치 계획",
+                            steps=[f"S{i}" for i in range(1, 9)])
+            return {"message": {"content": json.dumps(decision)}}
+
+        with patch.object(planner, "request", side_effect=response):
+            agent = Agent(self.store, planner)
+            result = agent.plan({"instruction": "LT2 FRT 도어트리 LH 100개 조립"})
+        self.assertEqual(result["state"], "PREVIEW_ONLY")
+        self.assertEqual(result["batch_preview"]["lot_count"], 10)
+        self.assertEqual(len(result["steps"]), 8)
+        with self.assertRaisesRegex(ValueError, "미리보기"):
+            agent.run(result["TaskID"], "normal")
+        self.assertEqual(self.store.get("tasks", result["TaskID"])["state"], "PREVIEW_ONLY")
+        task = self.agent.plan({"instruction": "RH 103개 조립"})
+        self.assertEqual((task["batch_preview"]["lot_count"], task["batch_preview"]["remainder"]), (11, 3))
+
     def test_quality_and_catalog(self):
         a = collect(self.store, {"mode":"mock"})
         b = collect(self.store, {"mode":"mock", "jig_id":a["jig_id"]})

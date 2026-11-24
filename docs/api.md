@@ -51,6 +51,8 @@ curl -s 'http://localhost:8080/api/datasets?step=S7&skill=SKL-011&source=Sim&gra
 
 수집 record의 공통 메타데이터는 세션 데이터와 대조합니다. robot_id/asset_id는 선택 필드입니다. timestamp는 오프셋 포함 ISO 8601, modality는 video/robot/force/equipment/amr/context/event/teleop/simulation/inspection입니다. received_at, status, stream_id, frame_index, channel, EventID, xyz, frame, coordinate_unit은 품질 검사·표준화의 선택 필드입니다. 변환은 설정의 calibration_version → 원천 frame → 3×4 행렬을 이용합니다. 원본은 보존하고 정규화본과 SHA-256을 등록합니다. 기준 미설정 항목은 thresholds_TBD 및 트리거 결과에서 확인합니다.
 
+배치 계획은 `PREVIEW_ONLY` 및 `batch_preview` (quantity, lot_size, lot_count, remainder)를 반환합니다. 배치 계획의 실행 요청은 HTTP 400입니다.
+
 ## 상태 전이
 
 IDLE → PLANNING → READY → VALIDATING → RUNNING → DONE. 각 호출 직전 인터록을 재검사합니다. 조건 차단은 HOLD 또는 SAFE-STOP으로 종료하며, 유효하지 않은 결과는 STEP을 진행시키지 않습니다. 재시도는 RECOVERING → VALIDATING을 거치고 새 SkillInvocationID를 사용합니다. 계획 통신 오류는 FAILED입니다. 이벤트의 EventID는 중복 삽입을 방지합니다. 저장 실패 이벤트는 파일 Outbox로 버퍼링합니다. 실행 완료와 이벤트 저장 사이에서 프로세스가 중단되면 자동 복구·재실행하지 않습니다.

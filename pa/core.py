@@ -192,7 +192,14 @@ class Agent:
         task["steps"] = [{"StepCode": code, "name": name, "SubTaskID": uid(), "skills": [
             {"SkillID": sid, "SkillVersion": SKILLS[sid]["version"]} for sid in ids]}
             for code, name, ids in CONFIG["steps"]]
-        self.state(task, "READY", decision=decision, related_event=event_id)
+        quantity = decision["quantity"]
+        if quantity > 1:
+            lot_size = CONFIG.get("preview_lot_size", 10)
+            full, remainder = divmod(quantity, lot_size)
+            task["batch_preview"] = {"quantity": quantity, "lot_size": lot_size,
+                                     "lot_count": full + bool(remainder), "remainder": remainder}
+        state = "PREVIEW_ONLY" if quantity > 1 else "READY"
+        self.state(task, state, decision=decision, related_event=event_id)
         return task
 
     def run(self, task_id, scenario):
@@ -205,6 +212,8 @@ class Agent:
             if row is None:
                 raise KeyError(task_id)
             task = json.loads(row[0])
+            if task["state"] == "PREVIEW_ONLY":
+                raise ValueError("배치 계획은 미리보기 전용입니다. Mock 실행은 1개 작업을 생성하세요.")
             if task["state"] != "READY":
                 raise ValueError("READY 작업만 실행 가능합니다.")
             task["state"] = "VALIDATING"
