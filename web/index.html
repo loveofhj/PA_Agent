@@ -16,22 +16,25 @@
 <p id="status" role="status"></p>
 <section id="overview">
 <div class="overview-heading"><div><h1>공정 현황</h1><p>작업 진행과 최근 이상을 확인하세요.</p></div><button id="new-task">새 작업 계획</button></div>
+<div class="panel"><h2>운영 흐름</h2><div id="operation-flow"></div></div>
 <div id="metrics" class="metrics"></div>
 <div class="panel"><h2>최근 작업</h2><div id="recent"></div></div>
 <div class="panel"><h2>최근 활동과 알람</h2><div id="alarms"></div></div>
 </section>
 <section id="task" hidden>
 <h1>작업 계획 및 실행</h1>
+<div id="task-flow"></div>
 <form id="plan"><label>작업지시<textarea name="instruction" required>LT2 FRT 도어트림 LH 1개 조립</textarea></label><div class="row"><label>지그 ID<input name="JigID" required value="JIG-DEMO"></label><label>툴 ID<input name="ToolID" required value="TOOL-DEMO"></label></div><button>계획 미리보기</button></form>
 <div id="task-result"></div>
 <form id="run" hidden><label>Mock 실행 시나리오<select name="scenario">
 <option value="normal">정상</option><option value="mismatch">지그 불일치</option><option value="recover">체결 실패 후 복구</option><option value="failure">체결 재작업 한도 초과</option><option value="ng">최종 검사 NG</option><option value="safe_stop">안전 허가 없음</option><option value="stale">PLC 상태 STALE</option><option value="low_confidence">저신뢰</option><option value="timeout">응답 타임아웃</option>
 </select></label><button>Mock 실행 승인</button></form>
-<div id="task-events"></div>
+<div id="task-events" class="timeline"></div>
 </section>
-<section id="skills" hidden><h1>Skill Registry</h1><div id="skill-list"></div></section>
+<section id="skills" hidden><h1>공정별 실행 기술</h1><div id="skill-flow"></div><div id="skill-list"></div></section>
 <section id="episodes" hidden>
-<h1>Episode 수집 및 품질 검사</h1>
+<h1>데이터 수집 및 품질 검사</h1>
+<div id="collection-flow"></div>
 <form id="collect">
 <div class="row"><label>수집 모드<select name="mode"><option value="mock">Mock 생성</option><option value="upload">파일 업로드</option></select></label><label>출처<select name="source"><option>Sim</option><option>Real</option></select></label><label>STEP<select name="step_code" id="episode-step"></select></label><label>Skill<select name="skill_id" id="episode-skill"></select></label></div>
 <div class="row"><label>최종 검사<select name="final_inspection"><option>OK</option><option>NG</option></select></label><label>계열<select name="series"><option value="normal">정상</option><option value="variation">변동</option><option value="recovery">복구</option></select></label><label>복구 이력<input name="recovery"></label><label class="check"><input name="label_confirmed" type="checkbox" checked>라벨 확인</label></div>
@@ -41,10 +44,11 @@
 </section>
 <section id="catalog" hidden>
 <h1>AI Ready 데이터셋</h1>
+<div id="catalog-flow"></div>
 <form id="promote"><div class="row"><label>데이터셋 ID<input name="dataset_id" required value="wp8-demo"></label><label>소유 기관<input name="owner" value="local"></label><label>접근 권한<input name="access" value="local"></label><label>보안 등급<input name="classification" value="internal"></label><label>보관 기간<input name="retention" value="TBD"></label></div><div id="members"></div><button>선택한 에피소드로 새 버전 등록</button></form>
 <h2>카탈로그</h2><form id="filters" class="row"><label>STEP<input name="step" placeholder="S7"></label><label>Skill<input name="skill" placeholder="SKL-011"></label><label>출처<select name="source"><option value="">전체</option><option>Real</option><option>Sim</option><option>Co-training</option></select></label><label>품질<select name="grade"><option value="">전체</option><option>A</option><option>B</option><option>C</option></select></label><button>조회</button></form><div id="datasets"></div>
 </section>
-<section id="events" hidden><h1>이벤트·결정 로그</h1><button id="replay">로컬 Outbox 재전송</button><div id="event-list"></div></section>
+<section id="events" hidden><h1>활동 기록</h1><div class="overview-heading"><p class="muted">최근 기록부터 표시합니다.</p><button id="replay">로컬 Outbox 재전송</button></div><div id="event-list" class="timeline"></div></section>
 </main>
 <aside class="chat" aria-labelledby="chat-title">
 <div class="chat-head"><div class="brand-mark" aria-hidden="true">PA</div><div><h2 id="chat-title">PA Agent</h2><p id="chat-provider">운영 조회 도우미</p></div></div>

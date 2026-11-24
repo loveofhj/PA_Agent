@@ -51,3 +51,15 @@ h1{font-size:clamp(1.45rem,3vw,2rem);letter-spacing:-.04em}
 #chat-form{display:grid;margin:0;border:0;padding:.7rem 1rem 1rem;gap:.3rem;justify-items:stretch}
 #chat-form div{display:flex;gap:.4rem}#question{min-width:0;flex:1}#chat-form button{white-space:nowrap}
 @media(max-width:780px){.workspace{grid-template-columns:1fr}.chat{position:static;max-height:35rem}.overview-heading{align-items:flex-start}}
+.flow{list-style:none;display:flex;gap:1.4rem;padding:.2rem .15rem .65rem;margin:.5rem 0;overflow-x:auto;scroll-padding:.2rem}
+.flow-item{position:relative;min-width:7.2rem;flex:1;display:flex;padding:0}
+.flow-item:not(:last-child)::after{content:"";position:absolute;left:calc(100% + .44rem);top:calc(50% - .22rem);width:.45rem;height:.45rem;border-top:2px solid #69988c;border-right:2px solid #69988c;transform:rotate(45deg)}
+.flow-card{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:.35rem;text-align:left;min-width:0;width:100%;padding:.75rem;background:white;color:#18332f;border:1px solid #cbddd6;border-radius:.75rem;overflow-wrap:anywhere}
+.flow-card strong{font-size:.92rem}.flow-caption{color:#496762;font-size:.78rem}.flow-tag{font-size:.74rem;font-weight:700;color:#096354}
+button.flow-card:hover,button.flow-card[aria-pressed=true]{background:#e5f5ef;border-color:#519c88}
+.flow-done{background:#e8f6ef;border-color:#99c8b8}.flow-alert{background:#fff2e9;border-color:#dbad96}.flow-alert .flow-tag{color:#943823}
+.timeline{display:grid;gap:.4rem}.timeline .activity{position:relative;margin-left:.45rem;border-top:0;border-left:2px solid #9fc6ba;padding:.35rem .85rem .75rem}
+.timeline .activity::before{content:"";position:absolute;left:-.35rem;top:.65rem;width:.55rem;height:.55rem;background:#087766;border-radius:50%}
+.timeline .event-alert::before{background:#a7462d}.event-time{font-size:.76rem;color:#496762}
+@media(max-width:600px){.flow{flex-direction:column;gap:.9rem;overflow:visible}.flow-item:not(:last-child)::after{left:50%;top:calc(100% + .08rem);transform:rotate(135deg)}}
+button.open-task{justify-self:start;background:white;color:#096354;border-color:#cbddd6;font-size:.8rem;padding:.35rem .55rem}

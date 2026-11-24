@@ -3,11 +3,36 @@ const byId = id => document.getElementById(id);
 let selectedTask;
 let registry = [];
 let steps = {};
+let stepDefinitions = [];
+let selectedSkillStep;
 function node(tag, value, cls) {
   const el = document.createElement(tag);
   if (value !== undefined) el.textContent = value;
   if (cls) el.className = cls;
   return el;
+}
+function flow(label, entries) {
+  const list = node("ol", undefined, "flow");
+  list.setAttribute("aria-label", label);
+  list.setAttribute("role", "list");
+  for (const {title, caption, tag, tone, action, current} of entries) {
+    const item = node("li", undefined, "flow-item");
+    const card = node(action ? "button" : "div", undefined, "flow-card" + (tone ? " " + tone : ""));
+    if (action) {
+      card.type = "button";
+      card.addEventListener("click", action);
+      if (current !== undefined) card.setAttribute("aria-pressed", String(current));
+    }
+    if (tag) card.append(node("span", tag, "flow-tag"));
+    card.append(node("strong", title));
+    if (caption) card.append(node("span", caption, "flow-caption"));
+    item.append(card);
+    list.append(item);
+  }
+  return list;
+}
+function openPage(page) {
+  document.querySelector(`nav [data-page="${page}"]`).click();
 }
 function detail(title, data) {
   const box = node("details");
@@ -49,8 +74,12 @@ function eventDetail(event) {
   const title = causeNames[event.cause] || eventNames[event.kind] || stateNames[event.state] || "시스템 활동";
   const date = new Date(event.timestamp);
   const when = Number.isNaN(date.getTime()) ? "" : date.toLocaleString("ko-KR", {dateStyle:"short",timeStyle:"short"});
-  return activity(title,[when,event.StepCode,event.message].filter(Boolean).join(" · "),
+  const row = activity(title,[event.StepCode,event.message].filter(Boolean).join(" · "),
     event.cause ? "확인 필요" : "",Boolean(event.cause),event);
+  row.prepend(node("time", when, "event-time"));
+  row.firstChild.dateTime = event.timestamp;
+  row.classList.toggle("event-alert", Boolean(event.cause));
+  return row;
 }
 function taskDetail(task) {
   return activity(task.instruction,[task.current_step,task.error].filter(Boolean).join(" · "),
@@ -73,15 +102,40 @@ async function overview() {
     const el = node("div", undefined, "metric");
     el.append(node("strong", value || 0), node("span",label)); return el;
   }));
-  fill("recent", result.tasks, taskDetail);
+  fill("recent", result.tasks, task => {
+    const row = taskDetail(task);
+    const button = node("button", "공정 흐름 보기", "open-task");
+    button.addEventListener("click", async () => {
+      try {
+        await showTask(await api("tasks/" + task.TaskID));
+        openPage("task");
+        byId("task-result").scrollIntoView({block:"start"});
+      } catch (error) { status(error.message,true); }
+    });
+    row.insertBefore(button, row.lastChild);
+    return row;
+  });
   fill("alarms", result.events, eventDetail);
 }
 async function showTask(task) {
   selectedTask = task.TaskID;
-  const plan = node("ol");
-  for (const step of task.steps || []) {
-    plan.append(node("li", step.StepCode + " " + step.name + " · " + step.skills.map(x => x.SkillID).join(", ")));
-  }
+  const events = (await api("events")).filter(e => e.TaskID === task.TaskID);
+  const completed = new Set(events.filter(e => e.kind === "STEP_DONE").map(e => e.StepCode));
+  const plan = flow("S1~S8 조립 공정", (task.steps || []).map(step => {
+    const isComplete = completed.has(step.StepCode);
+    const active = !isComplete && task.current_step === step.StepCode;
+    const technicalNames = step.skills.map(skill => registry.find(entry => entry.id === skill.SkillID)?.name || skill.SkillID);
+    return {title: step.name, tag: step.StepCode + " · " + (isComplete ? "완료" :
+      active ? stateNames[task.state] : "예정"), caption: technicalNames.join(" · "),
+      tone: isComplete ? "flow-done" : active ? "flow-alert" : ""};
+  }));
+  byId("task-flow").replaceChildren(flow("작업 처리 순서", [
+    {title: "작업지시", tone: "flow-done"},
+    {title: "계획 검증", caption: task.steps ? "계획 생성됨" : stateNames[task.state],
+      tone: task.steps ? "flow-done" : "flow-alert"},
+    {title: "Mock 실행", caption: task.batch_preview ? "배치 미리보기" : stateNames[task.state],
+      tone: task.state === "DONE" ? "flow-done" : ""}
+  ]));
   const batch = task.batch_preview;
   const summary = batch ? [
     node("p", `${task.RecipeID} ${batch.quantity}개 · LOT ${batch.lot_count}개 (LOT당 최대 ${batch.lot_size}개)` +
@@ -91,25 +145,57 @@ async function showTask(task) {
   byId("task-result").replaceChildren(node("h2", (stateNames[task.state] || task.state) + (task.current_step ? " · " + task.current_step : "")),
     node("p", task.error || task.decision?.reason || ""), ...summary, plan, taskDetail(task));
   byId("run").hidden = task.state !== "READY";
-  const events = (await api("events")).filter(e => e.TaskID === selectedTask);
   fill("task-events",events,eventDetail);
 }
 async function showSkills() {
   const events = await api("events");
-  fill("skill-list", registry, skill => {
-    const latest = events.find(e => e.SkillID === skill.id && e.kind === "SKILL_RESULT");
-    return detail(skill.id+" · "+skill.name+" · "+skill.steps+" · "+skill.version, {...skill, latest:latest || null});
-  });
+  function skillsAt(code) {
+    return registry.filter(skill => skill.steps === "S1~S8" || skill.steps.split(",").includes(code));
+  }
+  function render() {
+    byId("skill-flow").replaceChildren(flow("기술을 확인할 공정 선택", stepDefinitions.map(([code, name]) => ({
+      title: name, tag: code, caption: `${skillsAt(code).length}개 기술`,
+      current: code === selectedSkillStep,
+      action: () => {
+        selectedSkillStep = code;
+        render();
+        byId("skill-flow").querySelector('[aria-pressed="true"]').focus();
+      }
+    }))));
+    fill("skill-list", skillsAt(selectedSkillStep), skill => {
+      const latest = events.find(e => e.SkillID === skill.id && e.StepCode === selectedSkillStep && e.kind === "SKILL_RESULT");
+      const caption = latest ? latest.verified ? "최근 검증 통과" : "최근 검증 실패" : "실행 기록 없음";
+      return activity(skill.name, "입력 · " + skill.input + " / 확인 결과 · " + skill.output,
+        caption, Boolean(latest && !latest.verified), {...skill, latest:latest || null});
+    });
+  }
+  render();
 }
 function episodeDetail(e) {
-  return detail(e.quality.grade + " · " + e.source + " · " + e.step_code + " · " + e.skill_id +
-    " · " + (e.quality.ready ? "승격 가능" : "승격 보류"),e);
+  const {grade, ready, defects} = e.quality;
+  const row = node("article", undefined, "panel");
+  row.append(node("h2", `${e.source} · ${e.step_code} · ${grade}등급`),
+    flow("에피소드 처리 흐름", [
+      {title:"데이터 수집", caption:e.source, tone:"flow-done"},
+      {title:"품질 검사", caption:`${grade}등급 · 결함 ${defects.length}건`, tone:grade === "C" ? "flow-alert" : "flow-done"},
+      {title:ready ? "승격 가능" : "승격 보류", tone:ready ? "flow-done" : "flow-alert"}
+    ]), detail("수집 및 품질 세부정보",e));
+  return row;
 }
 async function datasetList() {
   const params = new URLSearchParams();
   for (const [k,v] of new FormData(byId("filters"))) if(v.trim()) params.set(k,v.trim());
-  fill("datasets", await api("datasets?" + params), d => detail(
-    d.dataset_id+" v"+d.version+" · "+d.source+" · "+d.episode_count+"개 · "+d.steps.join(", "),d));
+  fill("datasets", await api("datasets?" + params), d => {
+    const row = node("article",undefined,"panel");
+    const quality = Object.entries(d.quality).filter(([,count]) => count)
+      .map(([grade,count]) => `${grade}등급 ${count}건`).join(" · ");
+    row.append(node("h2", d.dataset_id + " · v" + d.version), flow("데이터셋 구성", [
+      {title:"원본 에피소드", caption:`${d.source} · ${d.episode_count}건`},
+      {title:"품질 확인", caption:quality},
+      {title:"버전 등록", caption:`v${d.version} · ${d.steps.join(", ")}`, tone:"flow-done"}
+    ]), detail("멤버와 데이터 계보", d));
+    return row;
+  });
 }
 async function members() {
   const episodes = (await api("episodes")).filter(e => e.quality.ready);
@@ -195,7 +281,7 @@ handle("collect","submit",async form => {
   }
   const episode = await api("episodes",payload);
   const box = episodeDetail(episode);
-  box.open = true; byId("episode-result").replaceChildren(box);
+  byId("episode-result").replaceChildren(box);
   await pages.episodes(); status("수집과 품질 검사를 완료했습니다.");
 });
 handle("promote","submit",async form => {
@@ -210,6 +296,8 @@ handle("replay","click",async () => {
   const result = await api("outbox/replay",{}); await pages.events(); status("Outbox 재전송 "+result.replayed+"건");
 });
 Promise.all([api("skills").then(data => { registry=data; }), api("steps").then(data => {
+  stepDefinitions = data;
+  selectedSkillStep = data[0]?.[0];
   steps = Object.fromEntries(data.map(([code, , ids]) => [code, ids]));
   for (const step of Object.keys(steps)) byId("episode-step").append(new Option(step));
   byId("episode-step").value = "S7";
@@ -253,3 +341,26 @@ for (const suggestion of byId("chat-suggestions").querySelectorAll("button")) {
     byId("question").focus();
   });
 }
+
+byId("task-flow").append(flow("작업 처리 순서", [
+  {title:"작업지시", caption:"레시피 및 수량 입력"},
+  {title:"계획 검증", caption:"S1~S8 순서 확인"},
+  {title:"Mock 실행", caption:"단품 작업 승인"}
+]));
+byId("operation-flow").append(flow("운영 화면 바로가기", [
+  {title:"작업 관리", caption:"지시 → 계획", action:() => openPage("task")},
+  {title:"실행 기술", caption:"공정 → 기술", action:() => openPage("skills")},
+  {title:"데이터 수집", caption:"수집 → 품질", action:() => openPage("episodes")},
+  {title:"데이터셋", caption:"선택 → 등록", action:() => openPage("catalog")},
+  {title:"활동 기록", caption:"이벤트 → 원인", action:() => openPage("events")}
+]));
+byId("collection-flow").append(flow("수집 순서", [
+  {title:"데이터 준비", caption:"파일 또는 Mock"},
+  {title:"품질 검사", caption:"결함 확인 및 A/B/C 판정"},
+  {title:"데이터셋 등록", caption:"승격 가능 에피소드 선택", action:() => openPage("catalog")}
+]));
+byId("catalog-flow").append(flow("데이터셋 등록 순서", [
+  {title:"에피소드 선택", caption:"승격 가능한 기록"},
+  {title:"분할 지정", caption:"학습 · 검증 · 테스트"},
+  {title:"버전 등록", caption:"카탈로그에서 조회"}
+]));
