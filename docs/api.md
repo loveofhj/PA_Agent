@@ -54,3 +54,7 @@ curl -s 'http://localhost:8080/api/datasets?step=S7&skill=SKL-011&source=Sim&gra
 ## 상태 전이
 
 IDLE → PLANNING → READY → VALIDATING → RUNNING → DONE. 각 호출 직전 인터록을 재검사합니다. 조건 차단은 HOLD 또는 SAFE-STOP으로 종료하며, 유효하지 않은 결과는 STEP을 진행시키지 않습니다. 재시도는 RECOVERING → VALIDATING을 거치고 새 SkillInvocationID를 사용합니다. 계획 통신 오류는 FAILED입니다. 이벤트의 EventID는 중복 삽입을 방지합니다. 저장 실패 이벤트는 파일 Outbox로 버퍼링합니다. 실행 완료와 이벤트 저장 사이에서 프로세스가 중단되면 자동 복구·재실행하지 않습니다.
+
+## 운영 대화
+
+`POST /api/chat`은 `{"question":"최근 실패 원인은?","history":[]}`를 받아 `{"answer":"…","provider":"ollama"}`를 반환합니다. 최근 작업 상태, 이상 기록, 수집 집계를 읽어서 응답합니다. 상태 변경과 실행 권한은 없습니다. Ollama 연결 또는 응답 오류는 503으로 반환하며, Mock 모드에서는 로컬 기록을 규칙으로 요약합니다.

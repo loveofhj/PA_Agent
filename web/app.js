@@ -28,16 +28,40 @@ async function api(path, data) {
 function fill(id, rows, render) {
   byId(id).replaceChildren(...(rows.length ? rows.map(render) : [node("p", "기록 없음")]));
 }
+const stateNames = {IDLE:"대기", PLANNING:"계획 작성 중", READY:"승인 대기", VALIDATING:"조건 확인 중",
+  RUNNING:"실행 중", RECOVERING:"복구 중", DONE:"완료", HOLD:"보류", FAILED:"실패", "SAFE-STOP":"안전 정지"};
+const eventNames = {INTERLOCK:"실행 조건 점검", STEP_DONE:"단계 완료", SKILL_RESULT:"실행 결과",
+  DATA_QUALITY:"데이터 품질 검사", DATASET_PROMOTED:"데이터셋 등록"};
+const causeNames = {"ERR-04":"실행 조건 불일치", "ERR-07":"최종 검사 불합격", "ERR-08":"설비 상태 갱신 필요",
+  "ERR-09":"판정 신뢰도 부족", "ERR-11":"스크류 체결 이상", "ERR-13":"안전 허가 없음",
+  LLM_PLAN_ERROR:"작업 계획 생성 오류", LLM_TIMEOUT:"Ollama 응답 시간 초과", NEEDS_CONFIRMATION:"작업지시 확인 필요"};
+function activity(title, description, badge, alert, data) {
+  const row = node("article",undefined,"activity");
+  const line = node("div",undefined,"activity-line");
+  line.append(node("strong",title));
+  if (badge) line.append(node("span",badge,alert ? "badge alert" : "badge"));
+  row.append(line);
+  if (description) row.append(node("p",description,"muted"));
+  row.append(detail("기술 세부정보",data));
+  return row;
+}
 function eventDetail(event) {
-  return detail([event.timestamp, event.StepCode, event.kind, event.state, event.cause].filter(Boolean).join(" · "), event);
+  const title = causeNames[event.cause] || eventNames[event.kind] || stateNames[event.state] || "시스템 활동";
+  const date = new Date(event.timestamp);
+  const when = Number.isNaN(date.getTime()) ? "" : date.toLocaleString("ko-KR", {dateStyle:"short",timeStyle:"short"});
+  return activity(title,[when,event.StepCode,event.message].filter(Boolean).join(" · "),
+    event.cause ? "확인 필요" : "",Boolean(event.cause),event);
 }
 function taskDetail(task) {
-  return detail([task.state, task.current_step, task.instruction, task.TaskID].filter(Boolean).join(" · "), task);
+  return activity(task.instruction,[task.current_step,task.error].filter(Boolean).join(" · "),
+    stateNames[task.state],["FAILED","HOLD","SAFE-STOP"].includes(task.state),task);
 }
 async function health() {
   const result = await api("health");
   byId("health").textContent = result.provider === "mock" ? "Mock LLM · 재점검" :
     result.ready ? "Ollama 연결됨 · 재점검" : "Ollama 연결/모델 확인 필요 · 재점검";
+  byId("chat-provider").textContent = result.provider === "mock" ? "Mock 시연 모드" :
+    result.ready ? "로컬 Ollama 연결됨" : "로컬 Ollama 연결 확인 필요";
   status(result.message, !result.ready);
 }
 async function overview() {
@@ -58,7 +82,7 @@ async function showTask(task) {
   for (const step of task.steps || []) {
     plan.append(node("li", step.StepCode + " " + step.name + " · " + step.skills.map(x => x.SkillID).join(", ")));
   }
-  byId("task-result").replaceChildren(node("h2", task.state + (task.current_step ? " · " + task.current_step : "")),
+  byId("task-result").replaceChildren(node("h2", (stateNames[task.state] || task.state) + (task.current_step ? " · " + task.current_step : "")),
     node("p", task.error || task.decision?.reason || ""), plan, taskDetail(task));
   byId("run").hidden = task.state !== "READY";
   const events = (await api("events")).filter(e => e.TaskID === selectedTask);
@@ -127,6 +151,7 @@ handle("plan","submit",async form => {
 });
 handle("run","submit",async form => {
   await showTask(await api("tasks/"+selectedTask+"/run",Object.fromEntries(new FormData(form))));
+  await overview();
   status("Mock 실행 결과를 확인하세요.");
 });
 for (const key of ["order_id","task_id","lot_id","jig_id","product_id","session_id","step_id","recipe_id","tool_id",
@@ -184,3 +209,41 @@ Promise.all([api("skills").then(data => { registry=data; }), api("steps").then(d
   byId("episode-step").value = "S7";
   updateSkills();
 }), health(), overview()]).catch(error => status(error.message,true));
+
+
+byId("new-task").addEventListener("click", () => {
+  document.querySelector('[data-page="task"]').click();
+  byId("plan").elements.instruction.focus();
+});
+const chatHistory = [];
+function bubble(message, role) {
+  const log = byId("chat-log");
+  const item = node("p",message,"bubble "+role);
+  log.append(item);
+  log.scrollTop = log.scrollHeight;
+  return item;
+}
+handle("chat-form","submit",async form => {
+  const input = form.elements.question;
+  const question = input.value.trim();
+  if (!question) return;
+  input.value = "";
+  bubble(question,"user");
+  const pending = bubble("운영 기록을 확인하고 있습니다…","assistant");
+  try {
+    const reply = await api("chat",{question,history:chatHistory.slice(-6)});
+    pending.textContent = reply.answer;
+    chatHistory.push({role:"user",content:question},{role:"assistant",content:reply.answer});
+    if (chatHistory.length > 6) chatHistory.splice(0,chatHistory.length-6);
+  } catch(error) {
+    pending.textContent = error.message;
+    pending.classList.add("error");
+  }
+  byId("chat-log").scrollTop = byId("chat-log").scrollHeight;
+});
+for (const suggestion of byId("chat-suggestions").querySelectorAll("button")) {
+  suggestion.addEventListener("click", () => {
+    byId("question").value = suggestion.textContent;
+    byId("question").focus();
+  });
+}

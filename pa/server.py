@@ -5,6 +5,7 @@ from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl, urlsplit
 
+from .chat import answer
 from .core import CONFIG, ROOT, SKILLS, Agent, Store, dump
 from .pipeline import catalog, collect, promote
 from .planner import Planner
@@ -79,6 +80,8 @@ class Handler(BaseHTTPRequestHandler):
                     LOG.warning("TaskID=%s state=%s %s", result["TaskID"], result["state"], result["error"])
             elif path.startswith("/api/tasks/") and path.endswith("/run"):
                 result = agent.run(path.split("/")[3], payload.get("scenario", "normal"))
+            elif path == "/api/chat":
+                return self.send(200, answer(store, agent.planner, payload))
             elif path == "/api/episodes":
                 result = collect(store, payload)
             elif path == "/api/datasets":
@@ -90,6 +93,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send(201, result)
         except (ValueError, TypeError, AttributeError) as error:
             self.send(400, {"error": str(error)})
+        except OSError as error:
+            self.send(503, {"error": str(error)})
         except KeyError:
             self.send(404, {"error": "레코드 없음"})
         except Exception:
